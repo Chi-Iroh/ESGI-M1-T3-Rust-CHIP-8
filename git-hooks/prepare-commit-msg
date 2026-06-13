@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# Trims trailing newline
+COMMIT_MSG=$(cat $1 | tr -d '\n')
+
+if ! [[ "$COMMIT_MSG" =~ ^(feat|fix|build|chore|ci|docs|style|refactor|perf|tests)[\ ]*(\([a-zA-Z0-9_]+\))?[\ ]*:[\ ]*[^\ ].*$ ]]; then
+    echo "Commit message '$COMMIT_MSG' doesn't match Conventional Commits' rules !" >&2
+    exit 1
+fi
