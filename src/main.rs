@@ -27,10 +27,12 @@ async fn main() {
     }
     let sound = sound.unwrap();
 
-    macroquad::audio::play_sound_once(&sound);
-
     loop {
         clear_background(BLACK);
+
+        if is_key_down(KeyCode::Space) {
+            macroquad::audio::play_sound_once(&sound);
+        }
 
         for y in 0..SCREEN_HEIGHT {
             for x in 0..SCREEN_WIDTH {
