@@ -16,8 +16,19 @@ fn window_conf() -> Conf {
     }
 }
 
+const AUDIO_PATH: &str = "mixkit-video-game-lock-2851.wav";
+
 #[macroquad::main(window_conf)]
 async fn main() {
+    let sound = macroquad::audio::load_sound(AUDIO_PATH).await;
+    if let Err(err) = sound {
+        eprintln!("Impossible d'ouvrir le fichier son '{AUDIO_PATH}': '{err}'");
+        return;
+    }
+    let sound = sound.unwrap();
+
+    macroquad::audio::play_sound_once(&sound);
+
     loop {
         clear_background(BLACK);
 

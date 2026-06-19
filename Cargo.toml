@@ -4,4 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-macroquad = "0.4.15"
+# Par défaut, macroquad ne fournit pas le module audio
+# Il faut le demander explicitement comme ci-dessous
+macroquad = { version = "0.4.15", features = ["audio"] }
