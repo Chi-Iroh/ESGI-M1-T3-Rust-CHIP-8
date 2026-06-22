@@ -7,3 +7,9 @@ if ! [[ "$COMMIT_MSG" =~ ^(feat|fix|build|chore|ci|docs|style|refactor|perf|test
     echo "Commit message '$COMMIT_MSG' doesn't match Conventional Commits' rules !" >&2
     exit 1
 fi
+
+cargo build
+if [ $? -ne 0 ]; then
+    echo "CODE CANNOT COMPILE, REFUSING TO COMMIT !" >&2
+    exit 1
+fi
