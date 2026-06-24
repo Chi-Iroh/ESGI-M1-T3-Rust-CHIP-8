@@ -4,7 +4,7 @@ use cpu::{CPU, CPUAction};
 use thiserror::Error;
 
 const MEMORY_SIZE: usize = 4096; // 4KB of memory 
-const PROGRAM_RAM_ADDRESS_RANGE: (u16, u16) = (0x200, 0xFFF);
+pub const PROGRAM_RAM_ADDRESS_RANGE: (u16, u16) = (0x200, 0xFFF);
 
 #[derive(Error, Debug)]
 pub enum EngineError {
