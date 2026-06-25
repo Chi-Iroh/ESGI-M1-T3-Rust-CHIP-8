@@ -1,4 +1,4 @@
-use crate::engine::{Engine, EngineError, Opcode, PROGRAM_RAM_ADDRESS_RANGE};
+use crate::engine::{Engine, EngineError, Opcode, PROGRAM_RAM_ADDRESS_RANGE, stack};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -23,13 +23,19 @@ impl Interpreter {
         while engine.program_counter < PROGRAM_RAM_ADDRESS_RANGE.1 {
             let opcode = fetch(engine);
 
-            if opcode == 0x0000 {
-                break; // fin de prog // ! non comforme, sera remplacé par l'opcode 0x00EE (return from subroutine)
+            engine.program_counter += 2; // move to the next instruction
+
+            match self.execute(opcode, engine) {
+                Ok(_) => {}
+                // The stack underflow error indicates that the program has finished:
+                // we use the 0x00ee opcode as end of program signal, so we can break the loop
+                Err(InterpreterError::Engine(EngineError::StackError(
+                    stack::StackError::Underflow,
+                ))) => break,
+                
+                Err(e) => return Err(e),
             }
 
-            self.execute(opcode, engine)?;
-
-            engine.program_counter += 2; // move to the next instruction
         }
 
         Ok(())

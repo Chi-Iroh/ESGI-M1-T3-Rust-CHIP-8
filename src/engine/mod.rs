@@ -1,6 +1,8 @@
 pub mod cpu;
+pub mod stack;
 
 use cpu::{CPU, CPUAction};
+use stack::{Stack, StackError};
 use thiserror::Error;
 
 const MEMORY_SIZE: usize = 4096; // 4KB of memory 
@@ -12,12 +14,15 @@ pub enum EngineError {
     ProgramCounterOutOfBounds(u16),
     #[error("Load program error: {0}")]
     LoadProgramError(String),
+    #[error("Stack error: {0}")]
+    StackError(#[from] StackError),
 }
 
 pub struct Engine {
     cpu: cpu::CPU,
     pub program_counter: u16,
     pub memory: [u8; MEMORY_SIZE],
+    stack: Stack,
 }
 
 impl Engine {
@@ -26,6 +31,7 @@ impl Engine {
             cpu: CPU::new(),
             program_counter: PROGRAM_RAM_ADDRESS_RANGE.0,
             memory: [0; MEMORY_SIZE],
+            stack: Stack::new(),
         }
     }
 
@@ -79,9 +85,14 @@ impl Opcode for Engine {
         Ok(())
     }
 
-    // TODO: implementer l'opcode 0x2_nnn
     fn opcode_0x2_nnn(&mut self, adress: u16) -> Result<(), EngineError> {
-        panic!("Not implemented yet: opcode_0x2_nnn");
+        if adress < PROGRAM_RAM_ADDRESS_RANGE.0 || adress > PROGRAM_RAM_ADDRESS_RANGE.1 {
+            return Err(EngineError::ProgramCounterOutOfBounds(adress));
+        }
+
+        self.stack.push(self.program_counter)?;
+        self.program_counter = adress;
+        Ok(())
     }
 
     fn opcode_0x3_xnn(&mut self, no_register: u8, value: u8) -> Result<(), EngineError> {
@@ -98,9 +109,10 @@ impl Opcode for Engine {
         Ok(())
     }
 
-    // TODO: implementer l'opcode 0x00_ee
     fn opcode_0x00_ee(&mut self) -> Result<(), EngineError> {
-        panic!("Not implemented yet: opcode_0x00_ee");
+        let return_address = self.stack.pop()?;
+        self.program_counter = return_address;
+        Ok(())
     }
 
     fn opcode_0x5_xy0(&mut self, no_register_x: u8, no_register_y: u8) -> Result<(), EngineError> {
