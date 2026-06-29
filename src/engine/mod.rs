@@ -23,6 +23,7 @@ pub struct Engine {
     pub program_counter: u16,
     pub memory: [u8; MEMORY_SIZE],
     stack: Stack,
+    program_size: usize
 }
 
 impl Engine {
@@ -32,6 +33,7 @@ impl Engine {
             program_counter: PROGRAM_RAM_ADDRESS_RANGE.0,
             memory: [0; MEMORY_SIZE],
             stack: Stack::new(),
+            program_size: 0
         }
     }
 
@@ -51,8 +53,13 @@ impl Engine {
         self.memory[PROGRAM_RAM_ADDRESS_RANGE.0 as usize
             ..(PROGRAM_RAM_ADDRESS_RANGE.0 as usize + program.len())]
             .copy_from_slice(program);
+        self.program_size = program.len();
 
         Ok(())
+    }
+
+    pub fn out_of_bounds(&self) -> bool {
+        self.program_counter >= (PROGRAM_RAM_ADDRESS_RANGE.0 + self.program_size as u16)
     }
 }
 

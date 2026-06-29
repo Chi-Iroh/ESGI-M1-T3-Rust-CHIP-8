@@ -1,4 +1,4 @@
-use crate::engine::{Engine, EngineError, Opcode, PROGRAM_RAM_ADDRESS_RANGE, stack};
+use crate::engine::{Engine, EngineError, Opcode, stack};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -20,9 +20,7 @@ impl Interpreter {
         // current engine.program_counter == 0x200
 
         // stop when detect 0x0000 or when program_counter is out of bounds (end of memory)
-        while engine.program_counter < PROGRAM_RAM_ADDRESS_RANGE.1 {
-            let opcode = fetch(engine);
-
+        while let Some(opcode) = fetch(engine) {
             engine.program_counter += 2; // move to the next instruction
 
             match self.execute(opcode, engine) {
@@ -99,9 +97,14 @@ impl Interpreter {
 // -- utils --
 
 // Fetch the next opcode (2 bytes) : 0x60, 0x0A => 0x600A
-fn fetch(engine: &Engine) -> u16 {
+fn fetch(engine: &Engine) -> Option<u16> {
     let pc = engine.program_counter as usize;
-    (engine.memory[pc] as u16) << 8 | (engine.memory[pc + 1] as u16)
+
+    if engine.out_of_bounds() {
+        None
+    } else {
+        Some((engine.memory[pc] as u16) << 8 | (engine.memory[pc + 1] as u16))
+    }
 }
 
 // 0x_XNN => (X, NN)
