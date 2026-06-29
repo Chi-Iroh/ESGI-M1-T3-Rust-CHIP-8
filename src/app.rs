@@ -1,6 +1,5 @@
 use crate::engine::{Engine, EngineError};
 use crate::interpreter::{Interpreter, InterpreterError};
-use std::path::Path;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -38,7 +37,7 @@ impl App {
         Ok(app)
     }
 
-    pub fn new_from_file<P: AsRef<Path>>(path: P) -> Result<Self, AppError> {
+    pub fn new_from_file(path: &str) -> Result<Self, AppError> {
         // https://doc.rust-lang.org/beta/std/fs/fn.read.html
         let program = std::fs::read(path)?;
         let mut app = App::new();

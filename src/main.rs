@@ -9,7 +9,7 @@ use clap::Parser;
 fn main() {
     let args = cli::Args::parse();
 
-    let mut app = match App::new_from_file(args.input) {
+    let mut app = match App::new_from_file(args.input.as_str()) {
         Ok(app) => app,
         Err(e) => {
             eprintln!("Error loading program from file: {}", e);

@@ -1,5 +1,4 @@
 use clap::Parser;
-use std::path::PathBuf;
 
 /// CHIP-8 Emulator CLI
 #[derive(Parser, Debug)]
@@ -7,6 +6,6 @@ use std::path::PathBuf;
 pub struct Args {
     /// Path to the CHIP-8 program file
     #[arg(short, long)]
-    pub input: PathBuf, // ? ption<PathBuf> seems better than Option<String> for file paths
+    pub input: String,
 }
 
