@@ -9,6 +9,40 @@ pub enum InterpreterError {
     Engine(#[from] EngineError),
 }
 
+struct OpcodeArgs {
+    pub x: u8,
+    pub y: u8,
+    pub nn: u8,
+    pub nnn: u16
+}
+
+enum OpcodeCallback {
+    Callback(fn(&mut Engine) -> Result<(), EngineError>),
+    CallbackXY(fn(&mut Engine, u8, u8) -> Result<(), EngineError>),
+    CallbackXNN(fn(&mut Engine, u8, u8) -> Result<(), EngineError>),
+    CallbackNNN(fn(&mut Engine, u16) -> Result<(), EngineError>)
+}
+
+impl OpcodeArgs {
+    fn from(opcode: u16) -> Self {
+        Self {
+            x: ((opcode & 0x0F00) >> 8) as u8,
+            y: ((opcode & 0x00F0) >> 4) as u8,
+            nn: opcode as u8,
+            nnn: (opcode & 0x0FFF) as u16
+        }
+    }
+
+    fn call_opcode(&self, engine: &mut Engine, opcode_callback: OpcodeCallback) -> Result<(), EngineError> {
+        match opcode_callback {
+            OpcodeCallback::Callback(f) => f(engine),
+            OpcodeCallback::CallbackXY(f) => f(engine, self.x, self.y),
+            OpcodeCallback::CallbackXNN(f) => f(engine, self.x, self.nn),
+            OpcodeCallback::CallbackNNN(f) => f(engine, self.nnn),
+        }
+    }
+}
+
 pub struct Interpreter;
 
 impl Interpreter {
@@ -40,57 +74,34 @@ impl Interpreter {
     }
 
     fn execute(&self, opcode: u16, engine: &mut Engine) -> Result<(), InterpreterError> {
-        match opcode {
-            0x00EE => engine.opcode_0x00_ee()?,
-            0x1000..=0x1FFF => {
-                let address = opcode & 0x0FFF;
-                engine.opcode_0x1_nnn(address)?;
-            }
-            0x2000..=0x2FFF => {
-                let address = opcode & 0x0FFF;
-                engine.opcode_0x2_nnn(address)?;
-            }
-            0x3000..=0x3FFF => {
-                let (no_register, value) = decode_xnn(opcode);
-                engine.opcode_0x3_xnn(no_register, value)?;
-            }
-            0x4000..=0x4FFF => {
-                let (no_register, value) = decode_xnn(opcode);
-                engine.opcode_0x4_xnn(no_register, value)?;
-            }
-            0x5000..=0x5FFF => {
-                let (x, y) = decode_xy(opcode);
-                engine.opcode_0x5_xy0(x, y)?;
-            }
-            0x9000..=0x9FFF => {
-                let (x, y) = decode_xy(opcode);
-                engine.opcode_0x9_xy0(x, y)?;
-            }
-            0x6000..=0x6FFF => {
-                let (no_register, value) = decode_xnn(opcode);
-                engine.opcode_0x6_xnn(no_register, value)?;
-            }
-            0x7000..=0x7FFF => {
-                let (no_register, value) = decode_xnn(opcode);
-                engine.opcode_0x7_xnn(no_register, value)?;
-            }
-            0x8000..=0x8FFF => {
-                let (x, y) = decode_xy(opcode);
-                match opcode & 0x000F {
-                    0x0000 => engine.opcode_0x8_xy0(x, y)?,
-                    0x0001 => engine.opcode_0x8_xy1(x, y)?,
-                    0x0002 => engine.opcode_0x8_xy2(x, y)?,
-                    0x0003 => engine.opcode_0x8_xy3(x, y)?,
-                    0x0004 => engine.opcode_0x8_xy4(x, y)?,
-                    0x0005 => engine.opcode_0x8_xy5(x, y)?,
-                    0x0007 => engine.opcode_0x8_xy7(x, y)?,
-                    _ => return Err(InterpreterError::UnknownOpcode(opcode)),
-                }
-            }
-            _ => return Err(InterpreterError::UnknownOpcode(opcode)),
-        }
+        use OpcodeCallback::*;
 
-        Ok(())
+        let opcode_args = OpcodeArgs::from(opcode);
+        let opcode_callbacks = [
+            (0xFFFF, 0x00EE, Callback(Engine::opcode_0x00_ee)),
+            (0xF000, 0x1000, CallbackNNN(Engine::opcode_0x1_nnn)),
+            (0xF000, 0x2000, CallbackNNN(Engine::opcode_0x2_nnn)),
+            (0xF000, 0x3000, CallbackXNN(Engine::opcode_0x3_xnn)),
+            (0xF000, 0x4000, CallbackXNN(Engine::opcode_0x4_xnn)),
+            (0xF00F, 0x5000, CallbackXY(Engine::opcode_0x5_xy0)),
+            (0xF00F, 0x9000, CallbackXY(Engine::opcode_0x9_xy0)),
+            (0xF000, 0x6000, CallbackXNN(Engine::opcode_0x6_xnn)),
+            (0xF000, 0x7000, CallbackXNN(Engine::opcode_0x7_xnn)),
+            (0xF00F, 0x8000, CallbackXY(Engine::opcode_0x8_xy0)),
+            (0xF00F, 0x8001, CallbackXY(Engine::opcode_0x8_xy1)),
+            (0xF00F, 0x8002, CallbackXY(Engine::opcode_0x8_xy2)),
+            (0xF00F, 0x8003, CallbackXY(Engine::opcode_0x8_xy3)),
+            (0xF00F, 0x8004, CallbackXY(Engine::opcode_0x8_xy4)),
+            (0xF00F, 0x8005, CallbackXY(Engine::opcode_0x8_xy5)),
+            (0xF00F, 0x8007, CallbackXY(Engine::opcode_0x8_xy7))
+        ];
+
+        for (mask, result, callback) in opcode_callbacks {
+            if opcode & mask == result {
+                return opcode_args.call_opcode(engine, callback).map_err(InterpreterError::Engine);
+            }
+        }
+        Err(InterpreterError::UnknownOpcode(opcode))
     }
 }
 
@@ -105,18 +116,4 @@ fn fetch(engine: &Engine) -> Option<u16> {
     } else {
         Some((engine.memory[pc] as u16) << 8 | (engine.memory[pc + 1] as u16))
     }
-}
-
-// 0x_XNN => (X, NN)
-fn decode_xnn(opcode: u16) -> (u8, u8) {
-    let no_register = ((opcode & 0x0F00) >> 8) as u8;
-    let value = (opcode & 0x00FF) as u8;
-    (no_register, value)
-}
-
-// 0x_XY_ => (X, Y)
-fn decode_xy(opcode: u16) -> (u8, u8) {
-    let no_register_x = ((opcode & 0x0F00) >> 8) as u8;
-    let no_register_y = ((opcode & 0x00F0) >> 4) as u8;
-    (no_register_x, no_register_y)
 }
