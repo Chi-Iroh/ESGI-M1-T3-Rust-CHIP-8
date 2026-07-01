@@ -101,3 +101,141 @@ impl CPU {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+
+    #[test]
+    fn cpu_new_initialise_16_registres_a_zero() {
+        let cpu = CPU::new();
+        for n in 0u8..16 {
+            assert_eq!(cpu.get_register(n), 0);
+        }
+    }
+
+    #[test]
+    fn set_register_puis_get_register() {
+        let mut cpu = CPU::new();
+        cpu.set_register(0, 42);
+        assert_eq!(cpu.get_register(0), 42);
+    }
+
+
+    #[test]
+    fn action_addvalue_ajoute_une_constante() {
+        let mut cpu = CPU::new();
+        cpu.set_register(0, 10);
+        cpu.action(CPUAction::AddValue(0, 5));
+        assert_eq!(cpu.get_register(0), 15);
+    }
+
+    #[test]
+    fn action_addvalue_wrap_ne_touche_pas_vf() {
+        let mut cpu = CPU::new();
+        cpu.set_register(0, 250);
+        cpu.action(CPUAction::AddValue(0, 10));
+        assert_eq!(cpu.get_register(0), 4);
+        assert_eq!(cpu.get_register(0xF), 0);
+    }
+
+
+    #[test]
+    fn action_copy_copie_vy_dans_vx() {
+        let mut cpu = CPU::new();
+        cpu.set_register(1, 7);
+        cpu.action(CPUAction::Copy(0, 1));
+        assert_eq!(cpu.get_register(0), 7);
+    }
+
+    #[test]
+    fn action_or_bit_a_bit() {
+        let mut cpu = CPU::new();
+        cpu.set_register(0, 0b1100);
+        cpu.set_register(1, 0b1010);
+        cpu.action(CPUAction::Or(0, 1));
+        assert_eq!(cpu.get_register(0), 0b1110);
+    }
+
+    #[test]
+    fn action_and_bit_a_bit() {
+        let mut cpu = CPU::new();
+        cpu.set_register(0, 0b1100);
+        cpu.set_register(1, 0b1010);
+        cpu.action(CPUAction::And(0, 1));
+        assert_eq!(cpu.get_register(0), 0b1000);
+    }
+
+    #[test]
+    fn action_xor_bit_a_bit() {
+        let mut cpu = CPU::new();
+        cpu.set_register(0, 0b1100);
+        cpu.set_register(1, 0b1010);
+        cpu.action(CPUAction::Xor(0, 1));
+        assert_eq!(cpu.get_register(0), 0b0110);
+    }
+
+
+    #[test]
+    fn action_add_sans_overflow_vf_0() {
+        let mut cpu = CPU::new();
+        cpu.set_register(0, 10);
+        cpu.set_register(1, 5);
+        cpu.action(CPUAction::Add(0, 1));
+        assert_eq!(cpu.get_register(0), 15);
+        assert_eq!(cpu.get_register(0xF), 0);
+    }
+
+    #[test]
+    fn action_add_avec_overflow_vf_1() {
+        let mut cpu = CPU::new();
+        cpu.set_register(0, 250);
+        cpu.set_register(1, 10);
+        cpu.action(CPUAction::Add(0, 1));
+        assert_eq!(cpu.get_register(0), 4);
+        assert_eq!(cpu.get_register(0xF), 1);
+    }
+
+
+    #[test]
+    fn action_sub_sans_underflow_vf_1() {
+        let mut cpu = CPU::new();
+        cpu.set_register(0, 20);
+        cpu.set_register(1, 5);
+        cpu.action(CPUAction::Sub(0, 1));
+        assert_eq!(cpu.get_register(0), 15);
+        assert_eq!(cpu.get_register(0xF), 1);
+    }
+
+    #[test]
+    fn action_sub_avec_underflow_vf_0() {
+        let mut cpu = CPU::new();
+        cpu.set_register(0, 5);
+        cpu.set_register(1, 20);
+        cpu.action(CPUAction::Sub(0, 1));
+        assert_eq!(cpu.get_register(0), 241);
+        assert_eq!(cpu.get_register(0xF), 0);
+    }
+
+
+    #[test]
+    fn action_subfrom_sans_underflow_vf_1() {
+        let mut cpu = CPU::new();
+        cpu.set_register(0, 5);
+        cpu.set_register(1, 20);
+        cpu.action(CPUAction::SubFrom(0, 1));
+        assert_eq!(cpu.get_register(0), 15);
+        assert_eq!(cpu.get_register(0xF), 1);
+    }
+
+    #[test]
+    fn action_subfrom_avec_underflow_vf_0() {
+        let mut cpu = CPU::new();
+        cpu.set_register(0, 20);
+        cpu.set_register(1, 5);
+        cpu.action(CPUAction::SubFrom(0, 1));
+        assert_eq!(cpu.get_register(0), 241);
+        assert_eq!(cpu.get_register(0xF), 0);
+    }
+}
