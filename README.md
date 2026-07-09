@@ -4,6 +4,8 @@ Brad Dos Santos Patatas
 Robin Chaussy  
 Thomas Sayen
 
+Testé sur Windows 11 et Arch Linux, avec Rust 1.97.  
+
 ## Démarrer le projet
 
 ```bash
